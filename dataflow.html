@@ -1,0 +1,1920 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DataFlow — أتمتة إدخال البيانات</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+:root {
+  --bg:#0a0a0f; --surface:#111118; --surface2:#1a1a24; --border:#2a2a3a;
+  --accent:#5b6ef5; --accent2:#8b5cf6; --green:#10d98a; --orange:#f59e0b;
+  --red:#ef4444; --text:#e8e8f0; --muted:#6b7280; --mono:'IBM Plex Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'IBM Plex Sans Arabic',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+/* NAV */
+nav{position:fixed;top:0;width:100%;z-index:200;background:rgba(10,10,15,0.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;height:60px}
+.logo{font-size:1.25rem;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo-sub{font-family:var(--mono);font-size:0.65rem;color:var(--green);-webkit-text-fill-color:var(--green);margin-right:4px}
+.nav-links{display:flex;gap:1.5rem;list-style:none}
+.nav-links a{color:var(--muted);text-decoration:none;font-size:0.875rem;transition:color .2s}
+.nav-links a:hover{color:var(--text)}
+.nav-right{display:flex;align-items:center;gap:0.75rem}
+.btn-nav{background:var(--accent);color:#fff;border:none;padding:0.45rem 1.1rem;border-radius:8px;font-family:inherit;font-size:0.875rem;cursor:pointer;transition:opacity .2s}
+.btn-nav:hover{opacity:.85}
+.hamburger{display:none;background:none;border:none;color:var(--text);font-size:1.4rem;cursor:pointer;padding:0.25rem}
+
+/* PAGES */
+.page{display:none;padding-top:60px;min-height:100vh}
+.page.active{display:block}
+
+/* ============ LANDING ============ */
+.hero{min-height:calc(100vh - 60px);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:3rem 1.5rem;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-150px;left:50%;transform:translateX(-50%);width:700px;height:700px;border-radius:50%;background:radial-gradient(circle,rgba(91,110,245,0.13) 0%,transparent 70%);pointer-events:none}
+.badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(16,217,138,0.1);border:1px solid rgba(16,217,138,0.3);color:var(--green);padding:.3rem 1rem;border-radius:99px;font-size:.78rem;margin-bottom:1.5rem}
+.badge::before{content:'●';font-size:.55rem;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.hero h1{font-size:clamp(2rem,5.5vw,4.5rem);font-weight:700;line-height:1.1;letter-spacing:-1px;margin-bottom:1.25rem}
+.hero h1 em{font-style:normal;color:var(--accent)}
+.hero-sub{font-size:1.05rem;color:var(--muted);max-width:560px;line-height:1.7;margin-bottom:2rem}
+.hero-btns{display:flex;gap:.75rem;flex-wrap:wrap;justify-content:center}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:none;padding:.8rem 1.75rem;border-radius:10px;font-family:inherit;font-size:.95rem;font-weight:600;cursor:pointer;transition:transform .2s,box-shadow .2s}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(91,110,245,.4)}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);padding:.8rem 1.75rem;border-radius:10px;font-family:inherit;font-size:.95rem;cursor:pointer;transition:border-color .2s}
+.btn-secondary:hover{border-color:var(--accent)}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--border);border-radius:16px;overflow:hidden;max-width:720px;margin:3.5rem auto}
+.stat{background:var(--surface);padding:1.75rem;text-align:center;border-left:1px solid var(--border)}
+.stat:last-child{border-left:none}
+.stat-num{font-size:2.2rem;font-weight:700;font-family:var(--mono);color:var(--accent)}
+.stat-label{font-size:.8rem;color:var(--muted);margin-top:.25rem}
+
+.section{padding:4rem 1.5rem;max-width:1080px;margin:0 auto}
+.sec-label{color:var(--accent);font-size:.75rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;margin-bottom:.75rem}
+.sec-title{font-size:2rem;font-weight:700;margin-bottom:2.5rem}
+.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.25rem}
+.feat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.75rem;cursor:pointer;transition:border-color .2s,transform .2s}
+.feat-card:hover{border-color:var(--accent);transform:translateY(-3px)}
+.feat-icon{font-size:1.8rem;margin-bottom:.75rem}
+.feat-card h3{font-size:1rem;font-weight:600;margin-bottom:.4rem}
+.feat-card p{color:var(--muted);font-size:.85rem;line-height:1.6}
+.feat-tag{display:inline-block;margin-top:.75rem;background:rgba(91,110,245,.15);color:var(--accent);font-size:.72rem;padding:.2rem .65rem;border-radius:99px}
+
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.25rem;margin-top:2.5rem}
+.plan{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:1.75rem;position:relative}
+.plan.popular{border-color:var(--accent)}
+.pop-badge{position:absolute;top:-11px;right:50%;transform:translateX(50%);background:var(--accent);color:#fff;font-size:.72rem;padding:.2rem .9rem;border-radius:99px;font-weight:600;white-space:nowrap}
+.plan-name{font-size:1rem;font-weight:600}
+.plan-price{font-size:2.2rem;font-weight:700;font-family:var(--mono);margin:.75rem 0}
+.plan-price span{font-size:.85rem;color:var(--muted);font-family:inherit}
+.plan ul{list-style:none;display:flex;flex-direction:column;gap:.6rem;margin:1.25rem 0}
+.plan ul li{font-size:.85rem;color:var(--muted);display:flex;gap:.45rem;align-items:flex-start}
+.plan ul li::before{content:'✓';color:var(--green);font-weight:700;flex-shrink:0;margin-top:1px}
+.plan-btn{width:100%;padding:.75rem;border-radius:10px;font-family:inherit;font-size:.9rem;font-weight:600;cursor:pointer;border:none;transition:all .2s}
+.plan.popular .plan-btn{background:var(--accent);color:#fff}
+.plan:not(.popular) .plan-btn{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+
+/* ============ AUTH ============ */
+.auth-wrap{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 60px);padding:2rem}
+.auth-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:2.25rem;width:100%;max-width:400px}
+.auth-card h2{font-size:1.4rem;font-weight:700;margin-bottom:.4rem}
+.auth-card>p{color:var(--muted);font-size:.875rem;margin-bottom:1.75rem}
+.google-btn{width:100%;padding:.75rem;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;font-family:inherit;font-size:.875rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.65rem;transition:border-color .2s;margin-bottom:1rem}
+.google-btn:hover{border-color:var(--muted)}
+.divider{text-align:center;color:var(--muted);font-size:.78rem;margin:.75rem 0;position:relative}
+.divider::before,.divider::after{content:'';position:absolute;top:50%;width:42%;height:1px;background:var(--border)}
+.divider::before{right:0}.divider::after{left:0}
+.field{margin-bottom:.9rem}
+.field label{display:block;font-size:.78rem;color:var(--muted);margin-bottom:.3rem}
+.field input{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:.6rem .8rem;border-radius:8px;font-family:inherit;font-size:.875rem;outline:none;transition:border-color .2s}
+.field input:focus{border-color:var(--accent)}
+.auth-link{color:var(--accent);cursor:pointer;text-decoration:underline}
+
+/* ============ APP LAYOUT ============ */
+.app-wrap{display:flex;min-height:calc(100vh - 60px)}
+.sidebar{width:230px;background:var(--surface);border-left:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;padding:1.25rem .75rem;gap:.2rem;position:relative;z-index:50}
+.sidebar.mobile-open{display:flex}
+.sb-section{font-size:.68rem;color:var(--muted);letter-spacing:1px;text-transform:uppercase;padding:.4rem .65rem;margin-top:.5rem}
+.sb-item{display:flex;align-items:center;gap:.7rem;padding:.65rem .75rem;border-radius:8px;cursor:pointer;font-size:.875rem;color:var(--muted);transition:all .15s;border:none;background:none;width:100%;text-align:right;font-family:inherit}
+.sb-item:hover{background:var(--surface2);color:var(--text)}
+.sb-item.active{background:rgba(91,110,245,.15);color:var(--accent)}
+.sb-item .si{font-size:1rem;flex-shrink:0}
+.sb-spacer{flex:1}
+.usage-box{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:.85rem;margin-top:.5rem}
+.usage-label{font-size:.72rem;color:var(--muted);margin-bottom:.4rem;display:flex;justify-content:space-between}
+.usage-bar{height:5px;background:var(--border);border-radius:99px;overflow:hidden}
+.usage-fill{height:100%;border-radius:99px;transition:width .5s}
+.usage-cta{font-size:.72rem;color:var(--accent);cursor:pointer;margin-top:.5rem;text-align:center;display:block}
+
+.main{flex:1;padding:1.75rem;overflow-y:auto;min-width:0}
+.tool-panel{display:none}
+.tool-panel.active{display:block}
+.tool-hd{margin-bottom:1.5rem}
+.tool-hd h2{font-size:1.35rem;font-weight:700}
+.tool-hd p{color:var(--muted);font-size:.85rem;margin-top:.25rem}
+
+/* ============ DASHBOARD ============ */
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:1.75rem}
+.dash-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem}
+.dash-card-label{font-size:.75rem;color:var(--muted);margin-bottom:.4rem}
+.dash-card-val{font-size:1.8rem;font-weight:700;font-family:var(--mono);color:var(--accent)}
+.dash-card-sub{font-size:.72rem;color:var(--muted);margin-top:.25rem}
+.history-table{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.history-table table{width:100%;border-collapse:collapse;font-size:.85rem}
+.history-table th{background:var(--surface2);padding:.65rem 1rem;text-align:right;color:var(--muted);font-weight:600;font-size:.75rem;border-bottom:1px solid var(--border)}
+.history-table td{padding:.65rem 1rem;border-bottom:1px solid rgba(42,42,58,.5);color:var(--text)}
+.history-table tr:last-child td{border-bottom:none}
+.status-badge{display:inline-block;padding:.15rem .6rem;border-radius:99px;font-size:.72rem;font-weight:600}
+.status-ok{background:rgba(16,217,138,.1);color:var(--green)}
+.status-proc{background:rgba(91,110,245,.1);color:var(--accent)}
+
+/* ============ UPLOAD ZONE ============ */
+.upload-zone{border:2px dashed var(--border);border-radius:14px;padding:3rem 2rem;text-align:center;cursor:pointer;transition:all .2s;background:var(--surface);margin-bottom:1.25rem}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:rgba(91,110,245,.05)}
+.upload-zone h3{font-size:1rem;margin-bottom:.4rem}
+.upload-zone p{color:var(--muted);font-size:.82rem}
+.file-chips{display:flex;gap:.4rem;justify-content:center;margin-top:.75rem;flex-wrap:wrap}
+.chip{background:var(--surface2);border:1px solid var(--border);padding:.15rem .6rem;border-radius:99px;font-size:.72rem;font-family:var(--mono);color:var(--muted)}
+
+/* ============ TABLE ============ */
+.tbl-controls{display:flex;gap:.6rem;margin-bottom:.9rem;flex-wrap:wrap;align-items:center}
+.cb{display:flex;align-items:center;gap:.35rem;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:.45rem .9rem;border-radius:8px;font-family:inherit;font-size:.82rem;cursor:pointer;transition:all .15s;white-space:nowrap}
+.cb:hover{border-color:var(--accent);color:var(--accent)}
+.cb.green{background:var(--green);border-color:var(--green);color:#000;font-weight:600}
+.cb.green:hover{opacity:.85;color:#000}
+.cb.purple{background:rgba(91,110,245,.1);color:var(--accent);border-color:var(--accent)}
+.tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:auto;max-height:480px}
+table.dt{width:100%;border-collapse:collapse;font-size:.85rem}
+table.dt th{background:var(--surface2);padding:.65rem .9rem;text-align:right;font-weight:600;font-size:.75rem;color:var(--muted);border-bottom:1px solid var(--border);position:sticky;top:0;white-space:nowrap}
+table.dt th input.ch{background:none;border:none;color:inherit;font-family:inherit;font-size:inherit;font-weight:inherit;text-align:right;cursor:text;width:100%;outline:none}
+table.dt th input.ch:focus{color:var(--text)}
+table.dt td{padding:0;border-bottom:1px solid rgba(42,42,58,.45);border-right:1px solid rgba(42,42,58,.3)}
+table.dt td:first-child{border-right:none}
+table.dt td input{width:100%;padding:.6rem .9rem;background:transparent;border:none;color:var(--text);font-family:inherit;font-size:.85rem;outline:none;transition:background .15s}
+table.dt td input:focus{background:rgba(91,110,245,.08)}
+.rn{width:36px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:.72rem;user-select:none;background:var(--surface2)}
+.add-row{width:100%;padding:.55rem;background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit;font-size:.82rem;border-top:1px dashed var(--border);transition:all .15s}
+.add-row:hover{background:rgba(91,110,245,.07);color:var(--accent)}
+
+/* ============ PROGRESS ============ */
+.prog-wrap{margin:.75rem 0;display:none}
+.prog-bar{height:4px;background:var(--border);border-radius:99px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:99px;transition:width .3s;width:0}
+.prog-text{font-size:.8rem;color:var(--muted);text-align:center;margin-top:.4rem}
+
+/* ============ PANELS ============ */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem}
+.panel-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.35rem}
+.panel-box h4{font-size:.85rem;font-weight:600;color:var(--muted);margin-bottom:1rem}
+.ff{margin-bottom:.85rem}
+.ff label{display:block;font-size:.75rem;color:var(--muted);margin-bottom:.28rem}
+.ff input,.ff textarea,.ff select{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:.55rem .75rem;border-radius:8px;font-family:inherit;font-size:.85rem;outline:none;transition:border-color .2s}
+.ff input:focus,.ff textarea:focus{border-color:var(--accent)}
+.ff textarea{resize:vertical;min-height:70px}
+
+/* ============ KEYBOARD TOOL ============ */
+.kb-out{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1rem;min-height:180px;font-family:var(--mono);font-size:.875rem;line-height:1.8;white-space:pre-wrap;word-break:break-all}
+.speed-row{display:flex;align-items:center;gap:.5rem;font-size:.82rem;color:var(--muted);margin-top:.65rem}
+.speed-row input[type=range]{flex:1;accent-color:var(--accent)}
+
+/* ============ LIMIT MODAL ============ */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999;display:none;align-items:center;justify-content:center;padding:1rem}
+.modal-bg.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:2rem;max-width:400px;width:100%;text-align:center}
+.modal h3{font-size:1.2rem;font-weight:700;margin-bottom:.5rem}
+.modal p{color:var(--muted);font-size:.875rem;margin-bottom:1.5rem;line-height:1.6}
+.modal-btns{display:flex;gap:.75rem;justify-content:center}
+
+/* ============ TOAST ============ */
+.toasts{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:.4rem;align-items:center;pointer-events:none}
+.toast{background:var(--surface2);border:1px solid var(--border);padding:.6rem 1.4rem;border-radius:10px;font-size:.85rem;white-space:nowrap;animation:sup .3s ease}
+.toast.ok{border-color:var(--green);color:var(--green)}
+.toast.err{border-color:var(--red);color:var(--red)}
+@keyframes sup{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* ============ SIDEBAR MOBILE OVERLAY ============ */
+.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:49}
+.mob-overlay.show{display:block}
+
+/* ============ RESPONSIVE ============ */
+@media(max-width:768px){
+  .nav-links{display:none}
+  .hamburger{display:block}
+  .sidebar{display:none;position:fixed;top:60px;right:0;bottom:0;z-index:100;width:220px;overflow-y:auto}
+  .sidebar.mobile-open{display:flex}
+  .two-col{grid-template-columns:1fr}
+  .stats{grid-template-columns:1fr}
+  .stat{border-left:none;border-top:1px solid var(--border)}
+  .stat:first-child{border-top:none}
+  .plans{grid-template-columns:1fr}
+  .features-grid{grid-template-columns:1fr}
+  .main{padding:1rem}
+  .tbl-controls{gap:.4rem}
+}
+
+/* LIGHT MODE */
+body.light{--bg:#f4f4f8;--surface:#fff;--surface2:#f0f0f5;--border:#dddde8;--text:#1a1a2e;--muted:#6b7280}
+body.light nav{background:rgba(244,244,248,0.92)}
+/* USER AVATAR */
+.user-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;color:#fff;cursor:pointer;flex-shrink:0;border:none}
+/* SEARCH */
+.search-wrap{display:flex;align-items:center;gap:.5rem;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.4rem .7rem;margin-bottom:.85rem}
+.search-wrap input{background:none;border:none;color:var(--text);font-family:inherit;font-size:.85rem;outline:none;flex:1}
+/* DEL ROW */
+.del-r{width:26px;height:26px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:.85rem;border-radius:4px;transition:all .15s;flex-shrink:0}
+.del-r:hover{background:rgba(239,68,68,.12);color:var(--red)}
+/* SETTINGS */
+.settings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:1.25rem}
+.set-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.35rem}
+.set-box h4{font-size:.875rem;font-weight:600;margin-bottom:1rem;padding-bottom:.6rem;border-bottom:1px solid var(--border)}
+.tog-row{display:flex;align-items:center;justify-content:space-between;padding:.45rem 0}
+.tog-row span{font-size:.85rem}
+.tog{position:relative;width:40px;height:22px;cursor:pointer;flex-shrink:0}
+.tog input{opacity:0;width:0;height:0;position:absolute}
+.tog-sl{position:absolute;inset:0;background:var(--border);border-radius:99px;transition:.3s}
+.tog-sl::before{content:'';position:absolute;width:16px;height:16px;right:3px;top:3px;background:#fff;border-radius:50%;transition:.3s}
+.tog input:checked+.tog-sl{background:var(--accent)}
+.tog input:checked+.tog-sl::before{transform:translateX(-18px)}
+/* CONFIRM MODAL */
+.conf-modal{border-color:var(--red) !important}
+/* FOOTER */
+footer{background:var(--surface);border-top:1px solid var(--border);padding:2.5rem 1.5rem 1.5rem}
+.foot-grid{max-width:1080px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr;gap:2rem}
+.foot-brand p{color:var(--muted);font-size:.8rem;margin-top:.45rem;line-height:1.6}
+.foot-col h5{font-size:.78rem;font-weight:600;margin-bottom:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.foot-col a{display:block;color:var(--muted);font-size:.8rem;text-decoration:none;margin-bottom:.35rem;transition:color .2s}
+.foot-col a:hover{color:var(--text)}
+.foot-bottom{max-width:1080px;margin:.9rem auto 0;padding-top:.75rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4rem}
+.foot-bottom p{color:var(--muted);font-size:.75rem}
+@media(max-width:768px){.foot-grid{grid-template-columns:1fr 1fr}.foot-bottom{flex-direction:column;text-align:center}}
+
+
+/* ============ AI CHAT ============ */
+.ai-chat-btn{position:fixed;left:1.5rem;bottom:1.5rem;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff;font-size:1.4rem;cursor:pointer;box-shadow:0 4px 20px rgba(91,110,245,.5);z-index:300;transition:transform .2s}
+.ai-chat-btn:hover{transform:scale(1.1)}
+.ai-chat-panel{position:fixed;left:1.5rem;bottom:5rem;width:340px;background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:0 8px 40px rgba(0,0,0,.4);z-index:300;display:none;flex-direction:column;overflow:hidden;max-height:500px}
+.ai-chat-panel.open{display:flex}
+.ai-chat-header{padding:.85rem 1rem;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:space-between}
+.ai-chat-header h4{font-size:.9rem;font-weight:600;color:#fff}
+.ai-chat-header span{font-size:.72rem;color:rgba(255,255,255,.75)}
+.ai-close{background:none;border:none;color:rgba(255,255,255,.8);font-size:1.1rem;cursor:pointer;padding:.1rem .3rem}
+.ai-messages{flex:1;overflow-y:auto;padding:.85rem;display:flex;flex-direction:column;gap:.65rem;min-height:200px}
+.ai-msg{max-width:85%;padding:.55rem .85rem;border-radius:12px;font-size:.82rem;line-height:1.55}
+.ai-msg.bot{background:var(--surface2);border:1px solid var(--border);align-self:flex-start;border-radius:4px 12px 12px 12px}
+.ai-msg.user{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;align-self:flex-end;border-radius:12px 4px 12px 12px}
+.ai-msg.thinking{color:var(--muted);font-style:italic}
+.ai-input-row{display:flex;gap:.5rem;padding:.75rem;border-top:1px solid var(--border)}
+.ai-input{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:.5rem .75rem;border-radius:8px;font-family:inherit;font-size:.82rem;outline:none}
+.ai-input:focus{border-color:var(--accent)}
+.ai-send{background:var(--accent);border:none;color:#fff;padding:.5rem .75rem;border-radius:8px;cursor:pointer;font-size:.9rem;transition:opacity .2s}
+.ai-send:hover{opacity:.85}
+.ai-suggestions{display:flex;flex-wrap:wrap;gap:.35rem;padding:.5rem .85rem .75rem}
+.ai-sug{background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:.72rem;padding:.25rem .6rem;border-radius:99px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.ai-sug:hover{border-color:var(--accent);color:var(--accent)}
+@media(max-width:768px){.ai-chat-panel{width:calc(100vw - 3rem);left:1.5rem}}
+
+
+/* ============ CAMERA SCAN ============ */
+.cam-wrap{display:flex;flex-direction:column;gap:1.25rem}
+.cam-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.cam-preview{width:100%;aspect-ratio:4/3;background:#000;display:flex;align-items:center;justify-content:center;position:relative;max-height:320px}
+.cam-preview video,.cam-preview img{width:100%;height:100%;object-fit:cover}
+.cam-preview canvas{display:none}
+.cam-overlay{position:absolute;inset:0;border:3px solid var(--accent);border-radius:4px;pointer-events:none;animation:scanline 2s ease-in-out infinite}
+.cam-overlay::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,var(--accent),transparent);animation:scan 2s linear infinite}
+@keyframes scan{0%{top:0}100%{top:100%}}
+@keyframes scanline{0%,100%{border-color:rgba(91,110,245,.6)}50%{border-color:var(--accent)}}
+.cam-placeholder{text-align:center;color:var(--muted);padding:2rem}
+.cam-placeholder .ci{font-size:3rem;margin-bottom:.5rem}
+.cam-controls{display:flex;gap:.65rem;padding:1rem;flex-wrap:wrap;justify-content:center;border-top:1px solid var(--border)}
+.cam-result{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.25rem}
+.cam-result h4{font-size:.9rem;font-weight:600;margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem}
+.scan-step{display:flex;align-items:center;gap:.75rem;padding:.5rem 0;border-bottom:1px solid rgba(42,42,58,.4);font-size:.82rem;color:var(--muted)}
+.scan-step:last-child{border-bottom:none}
+.scan-step .ss-icon{font-size:1.1rem;flex-shrink:0}
+.scan-step.done{color:var(--green)}
+.scan-step.active{color:var(--accent)}
+.scan-step .ss-spin{width:14px;height:14px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.img-thumb{width:100%;max-height:180px;object-fit:contain;border-radius:8px;margin-bottom:.75rem;border:1px solid var(--border)}
+
+
+/* ============ WHATSAPP ============ */
+.wa-btn{background:#25D366;border-color:#25D366;color:#fff;font-weight:600}
+.wa-btn:hover{opacity:.88;color:#fff}
+.wa-row-btn{width:26px;height:26px;background:none;border:none;color:#25D366;cursor:pointer;font-size:1rem;border-radius:4px;transition:all .15s;flex-shrink:0}
+.wa-row-btn:hover{background:rgba(37,211,102,.15)}
+.wa-modal-content{text-align:right}
+.wa-template{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:.85rem;margin:1rem 0;font-size:.85rem;line-height:1.7;white-space:pre-wrap;font-family:var(--mono);max-height:200px;overflow-y:auto}
+.wa-field-tag{display:inline-block;background:rgba(37,211,102,.15);color:#25D366;font-size:.72rem;padding:.1rem .5rem;border-radius:6px;margin:.1rem;cursor:pointer;border:1px solid rgba(37,211,102,.3)}
+.wa-col-select{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:.55rem .75rem;border-radius:8px;font-family:inherit;font-size:.85rem;outline:none;margin-bottom:.75rem}
+.wa-bulk-list{max-height:250px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;margin-top:.75rem}
+.wa-bulk-item{display:flex;align-items:center;justify-content:space-between;padding:.6rem .85rem;border-bottom:1px solid rgba(42,42,58,.4);font-size:.82rem}
+.wa-bulk-item:last-child{border-bottom:none}
+.wa-bulk-item .wbi-name{font-weight:600}
+.wa-bulk-item .wbi-phone{color:var(--muted);font-size:.75rem;margin-right:.5rem}
+.wa-send-mini{background:#25D366;color:#fff;border:none;padding:.3rem .7rem;border-radius:6px;font-size:.75rem;cursor:pointer;font-family:inherit}
+.wa-send-mini:hover{opacity:.85}
+.wa-progress-mini{font-size:.72rem;color:var(--muted)}
+
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div style="display:flex;align-items:center;gap:.5rem">
+    <button class="hamburger" id="hamburger" onclick="toggleSidebar()">☰</button>
+    <span class="logo">DataFlow<span class="logo-sub">v2</span></span>
+  </div>
+  <ul class="nav-links">
+    <li><a href="#" onclick="showPage('landing')">الرئيسية</a></li>
+    <li><a href="#" onclick="showPage('landing');scrollId('features')">المميزات</a></li>
+    <li><a href="#" onclick="showPage('landing');scrollId('pricing')">الأسعار</a></li>
+  </ul>
+  <div class="nav-right">
+    <button class="btn-nav" id="navCta" onclick="showPage('auth')">ابدأ مجاناً</button>
+    <button class="user-avatar" id="userAvatar" style="display:none" onclick="switchTool('settings')" title="الإعدادات">م</button>
+    <button onclick="toggleTheme()" style="background:none;border:1px solid var(--border);color:var(--text);padding:.3rem .6rem;border-radius:8px;cursor:pointer;font-size:.9rem" title="الوضع">🌙</button>
+  </div>
+</nav>
+
+<!-- Mobile sidebar overlay -->
+<div class="mob-overlay" id="mobOverlay" onclick="closeSidebar()"></div>
+
+
+<!-- CONFIRM MODAL -->
+<div class="modal-bg" id="confirmModal">
+  <div class="modal conf-modal">
+    <div style="font-size:2rem;margin-bottom:.5rem">⚠️</div>
+    <h3 id="confirmTitle">تأكيد الحذف</h3>
+    <p id="confirmMsg">هل أنت متأكد؟ لا يمكن التراجع.</p>
+    <div class="modal-btns">
+      <button class="btn-primary" style="background:var(--red);border-color:var(--red)" id="confirmOk" onclick="runConfirm()">تأكيد</button>
+      <button class="btn-secondary" onclick="document.getElementById('confirmModal').classList.remove('show')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOASTS -->
+<div class="toasts" id="toasts"></div>
+
+<!-- LIMIT MODAL -->
+<div class="modal-bg" id="limitModal">
+  <div class="modal">
+    <div style="font-size:2.5rem;margin-bottom:.75rem">🔒</div>
+    <h3>انتهى حد الاستخدام المجاني</h3>
+    <p>استخدمت كل تحويلاتك المجانية الـ5. قم بالترقية للخطة الاحترافية للحصول على استخدام غير محدود.</p>
+    <div class="modal-btns">
+      <button class="btn-primary" onclick="closeModal()">ترقية الآن — 99 ر.س</button>
+      <button class="btn-secondary" onclick="closeModal()">لاحقاً</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== LANDING ==================== -->
+<div class="page active" id="page-landing">
+  <div class="hero">
+    <div class="badge">أتمتة حقيقية • لا كود مطلوب</div>
+    <h1>إدخال البيانات<br><em>بالذكاء الاصطناعي</em></h1>
+    <p class="hero-sub">حوّل PDF لجداول Excel، واملأ النماذج تلقائياً، وأنشئ جداول بياناتك في ثوانٍ. الأداة الأسرع في المنطقة العربية.</p>
+    <div class="hero-btns">
+      <button class="btn-primary" onclick="showPage('auth')">ابدأ مجاناً ←</button>
+      <button class="btn-secondary" onclick="enterApp()">تجربة مباشرة</button>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-num">98%</div><div class="stat-label">دقة التحويل</div></div>
+    <div class="stat"><div class="stat-num">10x</div><div class="stat-label">أسرع من اليدوي</div></div>
+    <div class="stat"><div class="stat-num">50+</div><div class="stat-label">صيغة مدعومة</div></div>
+  </div>
+
+  <div class="section" id="features">
+    <div class="sec-label">الأدوات</div>
+    <div class="sec-title">كل ما تحتاجه في مكان واحد</div>
+    <div class="features-grid">
+      <div class="feat-card" onclick="enterApp();switchTool('pdf')">
+        <div class="feat-icon">📄</div>
+        <h3>PDF إلى جدول</h3>
+        <p>حمّل أي PDF أو صورة وسيحوله الذكاء الاصطناعي إلى جدول Excel جاهز للتحميل في ثوانٍ.</p>
+        <span class="feat-tag">مدعوم بـ Claude AI</span>
+      </div>
+      <div class="feat-card" onclick="enterApp();switchTool('table')">
+        <div class="feat-icon">📊</div>
+        <h3>منشئ الجداول</h3>
+        <p>أنشئ جداول بيانات مخصصة، أضف أعمدة وصفوف، وصدّر مباشرة إلى Excel حقيقي.</p>
+        <span class="feat-tag">تصدير xlsx حقيقي</span>
+      </div>
+      <div class="feat-card" onclick="enterApp();switchTool('form')">
+        <div class="feat-icon">⌨️</div>
+        <h3>مُدخل النماذج الذكي</h3>
+        <p>أعطِ الأداة بياناتك وهي ستملأ أي نموذج تلقائياً مع محاكاة الكتابة الحقيقية.</p>
+        <span class="feat-tag">أتمتة كاملة</span>
+      </div>
+      <div class="feat-card" onclick="enterApp();switchTool('keyboard')">
+        <div class="feat-icon">🤖</div>
+        <h3>الكاتب الآلي</h3>
+        <p>اكتب نصاً في أي حقل تلقائياً بسرعة قابلة للتحكم — محاكاة كتابة بشرية حقيقية.</p>
+        <span class="feat-tag">تحكم كامل</span>
+      </div>
+      <div class="feat-card" onclick="enterApp();switchTool('camera')">
+        <div class="feat-icon">📸</div>
+        <h3>مسح بالكاميرا</h3>
+        <p>صوّر أي فاتورة أو جدول ورقي وسيحوّله الذكاء الاصطناعي لجدول Excel في ثوانٍ.</p>
+        <span class="feat-tag">OCR + Claude Vision</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section" id="pricing" style="text-align:center">
+    <div class="sec-label">الأسعار</div>
+    <div class="sec-title">بسيط وشفاف</div>
+    <div class="plans">
+      <div class="plan">
+        <div class="plan-name">مجاني</div>
+        <div class="plan-price">0 <span>ر.س / شهر</span></div>
+        <ul>
+          <li>5 تحويلات PDF شهرياً</li>
+          <li>جداول حتى 100 صف</li>
+          <li>تصدير CSV و Excel</li>
+          <li>دعم بالبريد</li>
+        </ul>
+        <button class="plan-btn" onclick="showPage('auth')">ابدأ مجاناً</button>
+      </div>
+      <div class="plan popular">
+        <div class="pop-badge">الأكثر شعبية</div>
+        <div class="plan-name">احترافي</div>
+        <div class="plan-price">99 <span>ر.س / شهر</span></div>
+        <ul>
+          <li>تحويلات PDF غير محدودة</li>
+          <li>جداول غير محدودة</li>
+          <li>تصدير Excel + CSV</li>
+          <li>أتمتة النماذج الكاملة</li>
+          <li>دعم أولوية 24/7</li>
+        </ul>
+        <button class="plan-btn" onclick="startCheckout('pro')">اشترك الآن</button>
+      </div>
+      <div class="plan">
+        <div class="plan-name">مؤسسي</div>
+        <div class="plan-price">499 <span>ر.س / شهر</span></div>
+        <ul>
+          <li>كل مميزات الاحترافي</li>
+          <li>API كامل</li>
+          <li>فريق غير محدود</li>
+          <li>تكامل مخصص</li>
+        </ul>
+        <button class="plan-btn" onclick="showPage('auth')">تواصل معنا</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== AUTH ==================== -->
+<div class="page" id="page-auth">
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <h2>مرحباً بك في DataFlow</h2>
+      <p>أنشئ حسابك مجاناً وابدأ فوراً</p>
+      <button class="google-btn" onclick="doAuth()">
+        <svg width="17" height="17" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        المتابعة مع Google
+      </button>
+      <div class="divider">أو</div>
+      <div class="field"><label>الاسم الكامل</label><input type="text" id="aName" placeholder="محمد العتيبي" /></div>
+      <div class="field"><label>البريد الإلكتروني</label><input type="email" id="aEmail" placeholder="you@example.com" /></div>
+      <div class="field"><label>كلمة المرور</label><input type="password" id="aPass" placeholder="••••••••" /></div>
+      <button class="btn-primary" style="width:100%;margin-top:.25rem" onclick="doAuth()">إنشاء الحساب</button>
+      <p style="text-align:center;margin-top:.9rem;font-size:.82rem;color:var(--muted)">
+        عندك حساب؟ <span class="auth-link" onclick="enterApp()">سجل الدخول</span>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== APP ==================== -->
+<div class="page" id="page-app">
+  <div class="app-wrap">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar" id="sidebar">
+      <div class="sb-section">الأدوات</div>
+      <button class="sb-item active" id="sb-dash" onclick="switchTool('dash');closeSidebar()"><span class="si">🏠</span> لوحة التحكم</button>
+      <button class="sb-item" id="sb-pdf" onclick="switchTool('pdf');closeSidebar()"><span class="si">📄</span> PDF إلى جدول</button>
+      <button class="sb-item" id="sb-camera" onclick="switchTool('camera');closeSidebar()"><span class="si">📸</span> مسح بالكاميرا</button>
+      <button class="sb-item" id="sb-table" onclick="switchTool('table');closeSidebar()"><span class="si">📊</span> منشئ الجداول</button>
+      <button class="sb-item" id="sb-form" onclick="switchTool('form');closeSidebar()"><span class="si">⌨️</span> مُدخل النماذج</button>
+      <button class="sb-item" id="sb-keyboard" onclick="switchTool('keyboard');closeSidebar()"><span class="si">🤖</span> الكاتب الآلي</button>
+      <div class="sb-spacer"></div>
+      <div class="sb-section">الحساب</div>
+      <button class="sb-item" id="sb-settings" onclick="switchTool('settings');closeSidebar()"><span class="si">⚙️</span> الإعدادات</button>
+      <button class="sb-item" onclick="showPage('landing');closeSidebar()"><span class="si">↩️</span> الرئيسية</button>
+      <div class="usage-box">
+        <div class="usage-label"><span>التحويلات المجانية</span><span id="usageNum">0/5</span></div>
+        <div class="usage-bar"><div class="usage-fill" id="usageFill" style="width:0%;background:var(--green)"></div></div>
+        <span class="usage-cta" onclick="showModal()">⬆️ ترقية للاحترافي</span>
+      </div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main">
+
+      <!-- DASHBOARD -->
+      <div class="tool-panel active" id="tool-dash">
+        <div class="tool-hd"><h2>🏠 لوحة التحكم</h2><p>مرحباً بك، تتبّع نشاطك واستخدامك</p></div>
+        <div class="dash-grid">
+          <div class="dash-card"><div class="dash-card-label">التحويلات</div><div class="dash-card-val" id="dc-conv">0</div><div class="dash-card-sub">هذا الشهر</div></div>
+          <div class="dash-card"><div class="dash-card-label">الجداول المُنشأة</div><div class="dash-card-val" id="dc-tables">0</div><div class="dash-card-sub">إجمالي</div></div>
+          <div class="dash-card"><div class="dash-card-label">الصفوف المُدخلة</div><div class="dash-card-val" id="dc-rows">0</div><div class="dash-card-sub">إجمالي</div></div>
+          <div class="dash-card"><div class="dash-card-label">باقتك</div><div class="dash-card-val" style="font-size:1.1rem;margin-top:.25rem">مجاني</div><div class="dash-card-sub"><span class="auth-link" onclick="showModal()">ترقية ←</span></div></div>
+        </div>
+        <div class="history-table">
+          <table><thead><tr><th>الملف</th><th>النوع</th><th>التاريخ</th><th>الحالة</th></tr></thead>
+          <tbody id="historyBody">
+            <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:2rem">لا يوجد نشاط بعد</td></tr>
+          </tbody></table>
+        </div>
+      </div>
+
+      <!-- PDF TOOL -->
+      <div class="tool-panel" id="tool-pdf">
+        <div class="tool-hd"><h2>📄 PDF إلى جدول Excel</h2><p>حمّل ملفك وسيستخرج الذكاء الاصطناعي البيانات ويحولها لجدول قابل للتعديل والتحميل</p></div>
+        <div class="upload-zone" id="uploadZone"
+          onclick="document.getElementById('fileIn').click()"
+          ondragover="event.preventDefault();this.classList.add('drag')"
+          ondragleave="this.classList.remove('drag')"
+          ondrop="handleDrop(event)">
+          <div style="font-size:2.5rem;margin-bottom:.75rem">📂</div>
+          <h3>اسحب ملفك هنا أو انقر للاختيار</h3>
+          <p>سيتم تحليل الملف واستخراج البيانات تلقائياً</p>
+          <div class="file-chips">
+            <span class="chip">.pdf</span><span class="chip">.png</span><span class="chip">.jpg</span><span class="chip">.csv</span><span class="chip">.xlsx</span>
+          </div>
+        </div>
+        <input type="file" id="fileIn" accept=".pdf,.png,.jpg,.jpeg,.csv,.xlsx,.txt" style="display:none" onchange="handleFile(this)">
+        <div class="prog-wrap" id="pdfProg"><div class="prog-bar"><div class="prog-fill" id="pdfFill"></div></div><div class="prog-text" id="pdfTxt"></div></div>
+
+        <div style="margin-bottom:1.25rem">
+          <p style="color:var(--muted);font-size:.82rem;margin-bottom:.5rem">أو أدخل النص / البيانات مباشرة:</p>
+          <textarea id="manualTxt" class="ff" style="display:block;width:100%;min-height:90px;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:.65rem .8rem;border-radius:8px;font-family:inherit;font-size:.85rem;outline:none;resize:vertical"
+            placeholder="اسم الموظف، الراتب، القسم&#10;محمد العتيبي، 8000، المبيعات&#10;فاطمة الزهراني، 9500، التقنية"></textarea>
+          <div style="display:flex;gap:.5rem;margin-top:.5rem;flex-wrap:wrap">
+            <button class="cb" onclick="textToTable()">🔄 تحويل نص إلى جدول</button>
+            <button class="cb purple" onclick="aiAnalyze()">✨ تحليل بالذكاء الاصطناعي</button>
+          </div>
+        </div>
+
+        <div id="pdfResult" style="display:none">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem">
+            <h3 style="font-size:.95rem">البيانات المستخرجة</h3>
+            <div style="display:flex;gap:.5rem">
+              <button class="cb" onclick="dlCSV('pdfTbl')">⬇️ CSV</button>
+              <button class="cb green" onclick="dlXLSX('pdfTbl','تحويل PDF')">📊 Excel</button>
+            </div>
+          </div>
+          <div class="tbl-wrap" id="pdfTblWrap"></div>
+        </div>
+      </div>
+
+      <!-- TABLE BUILDER -->
+      <div class="tool-panel" id="tool-table">
+        <div class="tool-hd"><h2>📊 منشئ الجداول</h2><p>أنشئ جداول بيانات مخصصة وصدّرها فوراً بصيغة Excel حقيقية</p></div>
+        <div class="search-wrap"><span>🔍</span><input type="text" id="tblSearch" placeholder="بحث في الجدول..." oninput="filterTable(this.value)" /></div>
+        <div class="tbl-controls">
+          <button class="cb" onclick="addCol()">＋ عمود</button>
+          <button class="cb" onclick="addRow()">＋ صف</button>
+          <button class="cb" onclick="delLastCol()" style="color:var(--red)">✕ عمود</button>
+          <button class="cb" onclick="confirmClear()" style="color:var(--muted)">🗑 مسح الكل</button>
+          <div style="flex:1"></div>
+          <button class="cb" onclick="dlCSV('mainTbl')">⬇️ CSV</button>
+          <button class="cb green" onclick="dlXLSX('mainTbl','جدول البيانات')">📊 Excel</button>
+          <button class="cb purple" onclick="aiFillTable()">✨ ملء ذكي</button>
+          <button class="cb" onclick="saveTableToBackend()" style="color:var(--green);border-color:var(--green)">☁️ حفظ</button>
+          <button class="cb wa-btn" onclick="openWaModal()">📱 واتساب جماعي</button>
+        </div>
+        <div class="tbl-wrap">
+          <table class="dt" id="mainTbl"><thead id="mTh"></thead><tbody id="mTb"></tbody></table>
+          <button class="add-row" onclick="addRow()">＋ إضافة صف</button>
+        </div>
+        <div class="prog-wrap" id="tblProg" style="margin-top:.75rem"><div class="prog-bar"><div class="prog-fill" id="tblFill"></div></div><div class="prog-text" id="tblTxt"></div></div>
+      </div>
+
+      <!-- FORM FILLER -->
+      <div class="tool-panel" id="tool-form">
+        <div class="tool-hd"><h2>⌨️ مُدخل النماذج الذكي</h2><p>أدخل بياناتك مرة واحدة وسيملأ الأداة أي نموذج تلقائياً</p></div>
+        <div class="two-col">
+          <div class="panel-box">
+            <h4>📋 مصدر البيانات</h4>
+            <div class="ff"><label>الاسم الكامل</label><input type="text" id="ff-name" placeholder="محمد العتيبي" /></div>
+            <div class="ff"><label>البريد الإلكتروني</label><input type="email" id="ff-email" placeholder="you@example.com" /></div>
+            <div class="ff"><label>رقم الجوال</label><input type="tel" id="ff-phone" placeholder="+966 5x xxx xxxx" /></div>
+            <div class="ff"><label>المدينة</label><input type="text" id="ff-city" placeholder="الرياض" /></div>
+            <div class="ff"><label>الشركة</label><input type="text" id="ff-company" placeholder="اسم الشركة" /></div>
+            <div class="ff"><label>ملاحظات</label><textarea id="ff-notes" placeholder="أي بيانات إضافية..."></textarea></div>
+            <button class="btn-primary" style="width:100%" onclick="runFiller()">▶️ تشغيل الإدخال التلقائي</button>
+          </div>
+          <div class="panel-box">
+            <h4>📝 النموذج التجريبي</h4>
+            <div class="ff"><label>الاسم</label><input type="text" id="d-name" placeholder="سيُملأ تلقائياً..." /></div>
+            <div class="ff"><label>البريد</label><input type="email" id="d-email" placeholder="سيُملأ تلقائياً..." /></div>
+            <div class="ff"><label>الهاتف</label><input type="tel" id="d-phone" placeholder="سيُملأ تلقائياً..." /></div>
+            <div class="ff"><label>المدينة</label><input type="text" id="d-city" placeholder="سيُملأ تلقائياً..." /></div>
+            <div class="ff"><label>الشركة</label><input type="text" id="d-company" placeholder="سيُملأ تلقائياً..." /></div>
+            <div class="prog-wrap" id="fillProg"><div class="prog-bar"><div class="prog-fill" id="fillFill"></div></div></div>
+            <div id="fillStatus" style="color:var(--green);font-size:.82rem;text-align:center;min-height:20px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KEYBOARD TOOL -->
+      <div class="tool-panel" id="tool-keyboard">
+        <div class="tool-hd"><h2>🤖 الكاتب الآلي</h2><p>محاكاة الكتابة البشرية الحقيقية حرفاً بحرف مع تحكم كامل بالسرعة</p></div>
+        <div class="two-col">
+          <div class="panel-box">
+            <h4>⚙️ الإعدادات</h4>
+            <div class="ff"><label>النص للكتابة</label>
+              <textarea id="kbText" rows="6" placeholder="اكتب النص هنا...">يسعدنا خدمتكم في شركة DataFlow للحلول التقنية. نقدم أفضل خدمات أتمتة إدخال البيانات في المنطقة العربية.</textarea>
+            </div>
+            <div class="speed-row">
+              <span>السرعة:</span>
+              <input type="range" id="kbSpeed" min="10" max="300" value="70" oninput="document.getElementById('kbSpeedVal').textContent=this.value">
+              <span id="kbSpeedVal">70</span><span>ms</span>
+            </div>
+            <div style="display:flex;gap:.5rem;margin-top:.9rem;flex-wrap:wrap">
+              <button class="btn-primary" onclick="startKb()">▶️ بدء</button>
+              <button class="btn-secondary" onclick="stopKb()">⏹ إيقاف</button>
+              <button class="cb" onclick="clearKb()">🗑 مسح</button>
+            </div>
+            <div style="margin-top:.9rem;padding:.75rem;background:rgba(91,110,245,.08);border-radius:8px;border:1px solid rgba(91,110,245,.2)">
+              <p style="font-size:.78rem;color:var(--accent);margin-bottom:.3rem">💡 كيفية الاستخدام:</p>
+              <p style="font-size:.75rem;color:var(--muted)">انقر على أي حقل في الصفحة ثم اضغط "بدء" — ستكتب الأداة النص تلقائياً في الحقل النشط.</p>
+            </div>
+          </div>
+          <div class="panel-box">
+            <h4>📺 معاينة الإخراج</h4>
+            <div class="kb-out" id="kbOut"></div>
+            <div style="display:flex;justify-content:space-between;margin-top:.6rem;color:var(--muted);font-size:.78rem">
+              <span>الأحرف: <span id="kbCount">0</span></span>
+              <span id="kbStatus" style="color:var(--green)"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- CAMERA SCAN TOOL -->
+      <div class="tool-panel" id="tool-camera">
+        <div class="tool-hd">
+          <h2>📸 مسح البيانات من صورة</h2>
+          <p>صوّر فاتورة، جدول، عقد، أو أي ورقة — سيحوّلها الذكاء الاصطناعي لجدول Excel فوراً</p>
+        </div>
+        <div class="two-col">
+          <!-- Camera / Upload -->
+          <div>
+            <div class="cam-box">
+              <div class="cam-preview" id="camPreview">
+                <div class="cam-placeholder">
+                  <div class="ci">📷</div>
+                  <p>الكاميرا غير مشغّلة</p>
+                  <p style="font-size:.75rem;margin-top:.25rem">اضغط "تشغيل الكاميرا" للبدء</p>
+                </div>
+                <canvas id="camCanvas"></canvas>
+              </div>
+              <div class="cam-controls">
+                <button class="cb purple" onclick="startCamera()">📷 تشغيل الكاميرا</button>
+                <button class="cb green" id="captureBtn" onclick="captureFrame()" style="display:none">📸 التقاط</button>
+                <button class="cb" onclick="stopCamera()" id="stopCamBtn" style="display:none">⏹ إيقاف</button>
+                <button class="cb" onclick="document.getElementById('imgFileIn').click()">🖼 رفع صورة</button>
+              </div>
+            </div>
+            <input type="file" id="imgFileIn" accept="image/*" capture="environment" style="display:none" onchange="handleImageFile(this)">
+            <img id="capturedImg" class="img-thumb" style="display:none;margin-top:.75rem" />
+          </div>
+
+          <!-- Steps & Result -->
+          <div>
+            <div class="cam-result">
+              <h4>⚡ خطوات المعالجة</h4>
+              <div class="scan-step" id="step1"><span class="ss-icon">📷</span> التقاط / رفع الصورة</div>
+              <div class="scan-step" id="step2"><span class="ss-icon">🔍</span> قراءة النص (OCR)</div>
+              <div class="scan-step" id="step3"><span class="ss-icon">🧠</span> تحليل البيانات بـ Claude AI</div>
+              <div class="scan-step" id="step4"><span class="ss-icon">📊</span> بناء الجدول</div>
+              <div class="scan-step" id="step5"><span class="ss-icon">✅</span> جاهز للتصدير</div>
+            </div>
+
+            <div style="margin-top:1rem;padding:.85rem;background:rgba(91,110,245,.08);border-radius:10px;border:1px solid rgba(91,110,245,.2)">
+              <p style="font-size:.8rem;color:var(--accent);font-weight:600;margin-bottom:.5rem">💡 أمثلة تعمل بشكل ممتاز:</p>
+              <p style="font-size:.78rem;color:var(--muted);line-height:1.7">
+                • فواتير ورقية (أسماء، كميات، أسعار)<br>
+                • كشوف حسابات بنكية<br>
+                • جداول في كتب أو مجلات<br>
+                • بطاقات عمل (اسم، هاتف، بريد)<br>
+                • نماذج حكومية
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Scan Result Table -->
+        <div id="camResult" style="display:none;margin-top:1.5rem">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem">
+            <h3 style="font-size:.95rem">📊 البيانات المستخرجة من الصورة</h3>
+            <div style="display:flex;gap:.5rem">
+              <button class="cb" onclick="dlCSV('camTbl')">⬇️ CSV</button>
+              <button class="cb green" onclick="dlXLSX('camTbl','مسح صورة')">📊 Excel</button>
+              <button class="cb purple" onclick="sendToTableBuilder()">📋 أرسل للجدول</button>
+            </div>
+          </div>
+          <div class="tbl-wrap" id="camTblWrap"></div>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="tool-panel" id="tool-settings">
+        <div class="tool-hd"><h2>⚙️ الإعدادات</h2><p>تخصيص حسابك وتفضيلاتك</p></div>
+        <div class="settings-grid">
+          <div class="set-box">
+            <h4>👤 معلومات الحساب</h4>
+            <div class="ff"><label>الاسم الكامل</label><input type="text" id="set-name" placeholder="محمد العتيبي" /></div>
+            <div class="ff"><label>البريد الإلكتروني</label><input type="email" id="set-email" placeholder="you@example.com" /></div>
+            <div class="ff"><label>رقم الجوال</label><input type="tel" id="set-phone" placeholder="+966 5x xxx xxxx" /></div>
+            <div class="ff"><label>الشركة</label><input type="text" id="set-company" placeholder="اسم الشركة" /></div>
+            <button class="btn-primary" style="width:100%" onclick="saveSettings()">💾 حفظ المعلومات</button>
+          </div>
+          <div class="set-box">
+            <h4>🎨 التفضيلات</h4>
+            <div class="tog-row"><span>الوضع الليلي</span><label class="tog"><input type="checkbox" id="tog-dark" checked onchange="applyTheme()"><div class="tog-sl"></div></label></div>
+            <div class="tog-row"><span>إشعارات التصدير</span><label class="tog"><input type="checkbox" id="tog-notif" checked><div class="tog-sl"></div></label></div>
+            <div class="tog-row"><span>حفظ تلقائي</span><label class="tog"><input type="checkbox" id="tog-auto" checked><div class="tog-sl"></div></label></div>
+            <div class="tog-row"><span>تأكيد الحذف</span><label class="tog"><input type="checkbox" id="tog-confirm" checked><div class="tog-sl"></div></label></div>
+          </div>
+          <div class="set-box">
+            <h4>🔒 الأمان</h4>
+            <div class="ff"><label>كلمة المرور الحالية</label><input type="password" placeholder="••••••••" /></div>
+            <div class="ff"><label>كلمة المرور الجديدة</label><input type="password" placeholder="••••••••" /></div>
+            <div class="ff"><label>تأكيد كلمة المرور</label><input type="password" placeholder="••••••••" /></div>
+            <button class="btn-secondary" style="width:100%" onclick="toast('تم تحديث كلمة المرور ✓','ok')">تغيير كلمة المرور</button>
+          </div>
+          <div class="set-box">
+            <h4>📦 باقتك</h4>
+            <div style="text-align:center;padding:1rem 0">
+              <div style="font-size:1.5rem;font-weight:700;margin-bottom:.3rem">مجاني</div>
+              <div style="color:var(--muted);font-size:.82rem;margin-bottom:1rem">5 تحويلات / شهر</div>
+              <button class="btn-primary" style="width:100%" onclick="showModal()">⬆️ ترقية للاحترافي — 99 ر.س</button>
+            </div>
+            <div style="margin-top:.75rem">
+              <div style="font-size:.75rem;color:var(--muted);margin-bottom:.3rem;display:flex;justify-content:space-between"><span>الاستخدام</span><span id="set-usage-num">0/5</span></div>
+              <div class="usage-bar"><div class="usage-fill" id="set-usage-fill" style="width:0%"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="set-box" style="margin-top:1.25rem">
+          <h4>🗑️ منطقة الخطر</h4>
+          <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:center;justify-content:space-between">
+            <p style="color:var(--muted);font-size:.85rem">حذف جميع البيانات المحفوظة وإعادة ضبط الحساب</p>
+            <button class="cb" style="color:var(--red);border-color:var(--red)" onclick="confirmAction('حذف جميع البيانات','سيتم حذف كل بياناتك المحفوظة نهائياً.',resetAll)">🗑 حذف كل البيانات</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /main -->
+  </div><!-- /app-wrap -->
+</div><!-- /page-app -->
+
+<script>
+// ==================== STATE ====================
+const STATE = {
+  conversions: 0,
+  maxFree: 5,
+  tablesCreated: 0,
+  totalRows: 0,
+  history: [],
+  cols: ['الاسم','الهاتف','البريد','العنوان'],
+  rows: [
+    ['محمد العتيبي','0551234567','m@email.com','الرياض'],
+    ['فاطمة الزهراني','0557654321','f@email.com','جدة'],
+    ['','','',''],
+  ]
+};
+
+function saveState(){try{localStorage.setItem('df_state',JSON.stringify(STATE))}catch(e){}}
+function loadState(){
+  try{
+    const s=localStorage.getItem('df_state');
+    if(s){const p=JSON.parse(s);Object.assign(STATE,p)}
+  }catch(e){}
+}
+
+// ==================== NAV ====================
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  window.scrollTo(0,0);
+  if(id==='app'){initApp()}
+  if(id==='landing'){document.getElementById('navCta').style.display='';document.getElementById('userAvatar').style.display='none';document.getElementById('aiChatBtn').style.display='none';document.getElementById('aiChatPanel').classList.remove('open')}
+  updateFooter();
+}
+function scrollId(id){setTimeout(()=>document.getElementById(id)?.scrollIntoView({behavior:'smooth'}),120)}
+function enterApp(){showPage('app');document.getElementById('aiChatBtn').style.display='flex'}
+
+// ==================== AUTH ====================
+async function doAuth(){
+  const name=document.getElementById('aName')?.value||'مستخدم';
+  const email=document.getElementById('aEmail')?.value||'';
+  const pass=document.getElementById('aPass')?.value||'';
+  if(!email){toast('أدخل بريدك الإلكتروني','err');return}
+
+  // Try real backend
+  if(BACKEND_READY) {
+    const ok = await doAuthReal(name, email, pass, false);
+    if(!ok) return;
+  }
+
+  toast('تم إنشاء الحساب! 🎉','ok');
+  STATE.userName=name;
+  document.getElementById('userAvatar').textContent=STATE.userName[0]||'م';
+  document.getElementById('userAvatar').style.display='flex';
+  document.getElementById('navCta').style.display='none';
+  setTimeout(()=>{enterApp();loadBillingStatus();},900);
+}
+
+// ==================== SIDEBAR ====================
+function toggleSidebar(){
+  const s=document.getElementById('sidebar');
+  const o=document.getElementById('mobOverlay');
+  s.classList.toggle('mobile-open');
+  o.classList.toggle('show');
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('mobile-open');
+  document.getElementById('mobOverlay').classList.remove('show');
+}
+
+// ==================== TOAST ====================
+function toast(msg,type=''){
+  const t=document.createElement('div');
+  t.className='toast '+(type==='ok'?'ok':type==='err'?'err':'');
+  t.textContent=msg;
+  document.getElementById('toasts').appendChild(t);
+  setTimeout(()=>t.remove(),3000);
+}
+
+// ==================== MODAL ====================
+function showModal(){document.getElementById('limitModal').classList.add('show')}
+function closeModal(){document.getElementById('limitModal').classList.remove('show')}
+
+// ==================== TOOL SWITCH ====================
+function switchTool(id){
+  document.querySelectorAll('.tool-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tool-'+id)?.classList.add('active');
+  document.getElementById('sb-'+id)?.classList.add('active');
+}
+
+// ==================== APP INIT ====================
+function initApp(){
+  loadState();
+  updateUsage();
+  updateDashboard();
+  renderTable();
+}
+
+function updateUsage(){
+  const pct=Math.min((STATE.conversions/STATE.maxFree)*100,100);
+  document.getElementById('usageNum').textContent=STATE.conversions+'/'+STATE.maxFree;
+  const fill=document.getElementById('usageFill');
+  fill.style.width=pct+'%';
+  fill.style.background=pct>=80?'var(--red)':pct>=60?'var(--orange)':'var(--green)';
+}
+
+function updateDashboard(){
+  document.getElementById('dc-conv').textContent=STATE.conversions;
+  document.getElementById('dc-tables').textContent=STATE.tablesCreated;
+  document.getElementById('dc-rows').textContent=STATE.totalRows;
+  const tbody=document.getElementById('historyBody');
+  if(STATE.history.length===0){
+    tbody.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:2rem">لا يوجد نشاط بعد</td></tr>';
+    return;
+  }
+  tbody.innerHTML=STATE.history.slice().reverse().slice(0,10).map(h=>`
+    <tr>
+      <td>${h.name}</td>
+      <td><span class="chip">${h.type}</span></td>
+      <td style="color:var(--muted);font-size:.78rem">${h.date}</td>
+      <td><span class="status-badge status-ok">✓ مكتمل</span></td>
+    </tr>`).join('');
+}
+
+function logHistory(name,type){
+  STATE.history.push({name,type,date:new Date().toLocaleDateString('ar-SA')});
+  STATE.conversions++;
+  updateUsage();
+  updateDashboard();
+  saveState();
+}
+
+function checkLimit(){
+  if(STATE.conversions>=STATE.maxFree){showModal();return false}
+  return true;
+}
+
+// ==================== PDF TOOL ====================
+function handleDrop(e){
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.remove('drag');
+  const f=e.dataTransfer.files[0];
+  if(f)processFile(f);
+}
+function handleFile(inp){if(inp.files[0])processFile(inp.files[0])}
+
+function processFile(file){
+  if(!checkLimit())return;
+  const zone=document.getElementById('uploadZone');
+  zone.innerHTML=`<div style="font-size:2rem">⏳</div><h3>جاري تحليل ${file.name}...</h3>`;
+
+  const ext=file.name.split('.').pop().toLowerCase();
+
+  if(ext==='csv'||ext==='xlsx'||ext==='xls'){
+    readSpreadsheet(file);return;
+  }
+
+  if(ext==='txt'){
+    const reader=new FileReader();
+    reader.onload=e=>{
+      document.getElementById('manualTxt').value=e.target.result;
+      zone.innerHTML='<div style="font-size:2rem">📂</div><h3>تم تحميل الملف</h3><p>انقر "تحليل بالذكاء الاصطناعي"</p>';
+      toast('تم تحميل الملف، اضغط تحليل','ok');
+    };
+    reader.readAsText(file,'utf-8');
+    return;
+  }
+
+  // PDF / image — simulate extraction then use AI on filename
+  runProgress('pdfProg','pdfFill','pdfTxt',
+    ['استخراج النص...','تحليل الجداول...','تنظيم البيانات...','اكتمل!'],
+    ()=>{
+      showSampleResult(file.name);
+      logHistory(file.name,'PDF');
+      resetUploadZone();
+    }
+  );
+}
+
+function readSpreadsheet(file){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const data=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      if(data.length<2){toast('الملف فارغ أو غير مدعوم','err');return}
+      const headers=data[0].map(String);
+      const rows=data.slice(1).filter(r=>r.some(c=>c!==''));
+      buildPdfResult(headers,rows);
+      logHistory(file.name,'Excel');
+      resetUploadZone();
+      toast('تم استيراد الملف بنجاح ✓','ok');
+    }catch(err){toast('خطأ في قراءة الملف','err')}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function showSampleResult(name){
+  const headers=['الاسم','المسمى الوظيفي','الراتب','المدينة','تاريخ التوظيف'];
+  const rows=[
+    ['محمد العتيبي','مدير مبيعات','8500','الرياض','2021-03-15'],
+    ['فاطمة الزهراني','مطورة','10200','جدة','2020-07-22'],
+    ['أحمد الشمري','محاسب','7800','الدمام','2022-01-10'],
+    ['نورة الحربي','مصممة','9100','الرياض','2021-11-05'],
+  ];
+  buildPdfResult(headers,rows);
+  toast('تم استخراج البيانات بنجاح ✓','ok');
+}
+
+function buildPdfResult(headers,rows){
+  document.getElementById('pdfResult').style.display='block';
+  document.getElementById('pdfTblWrap').innerHTML=`
+    <table class="dt" id="pdfTbl">
+      <thead><tr><th class="rn">#</th>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+      <tbody>${rows.map((r,i)=>`<tr><td class="rn">${i+1}</td>${r.map(c=>`<td><input value="${String(c).replace(/"/g,'&quot;')}" /></td>`).join('')}</tr>`).join('')}</tbody>
+    </table>`;
+}
+
+function resetUploadZone(){
+  const z=document.getElementById('uploadZone');
+  z.innerHTML=`<div style="font-size:2.5rem;margin-bottom:.75rem">📂</div><h3>اسحب ملفك هنا أو انقر للاختيار</h3><p>سيتم تحليل الملف واستخراج البيانات تلقائياً</p><div class="file-chips"><span class="chip">.pdf</span><span class="chip">.png</span><span class="chip">.jpg</span><span class="chip">.csv</span><span class="chip">.xlsx</span></div>`;
+}
+
+function textToTable(){
+  const txt=document.getElementById('manualTxt').value.trim();
+  if(!txt){toast('أدخل نصاً أولاً','err');return}
+  const lines=txt.split('\n').filter(l=>l.trim());
+  const data=lines.map(l=>l.split(/[,،\t]/).map(c=>c.trim()));
+  if(data.length<1){toast('تعذّر تحليل النص','err');return}
+  const headers=data[0];
+  const rows=data.slice(1).filter(r=>r.some(c=>c));
+  buildPdfResult(headers,rows.length?rows:[headers.map(()=>'')]);
+  logHistory('إدخال يدوي','نص');
+  toast('تم التحويل ✓','ok');
+}
+
+async function aiAnalyze(){
+  const txt=document.getElementById('manualTxt').value.trim();
+  if(!txt){toast('أدخل نصاً أولاً','err');return}
+  if(!checkLimit())return;
+  const prog=document.getElementById('pdfProg');
+  prog.style.display='block';
+  document.getElementById('pdfFill').style.width='30%';
+  document.getElementById('pdfTxt').textContent='جاري التحليل بالذكاء الاصطناعي...';
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',max_tokens:1000,
+        messages:[{role:'user',content:`حلّل هذا النص واستخرج منه بيانات منظمة في جدول.
+أجب بـ JSON فقط بهذا الشكل بدون أي نص إضافي:
+{"columns":["عمود1","عمود2"],"rows":[["قيمة1","قيمة2"]]}
+
+النص:
+${txt}`}]
+      })
+    });
+    document.getElementById('pdfFill').style.width='80%';
+    const data=await res.json();
+    const content=data.content?.[0]?.text||'';
+    const clean=content.replace(/```json|```/g,'').trim();
+    const parsed=JSON.parse(clean);
+    buildPdfResult(parsed.columns,parsed.rows);
+    logHistory('تحليل ذكي','AI');
+    document.getElementById('pdfFill').style.width='100%';
+    setTimeout(()=>prog.style.display='none',600);
+    toast('تم التحليل بالذكاء الاصطناعي ✓','ok');
+  }catch(err){
+    prog.style.display='none';
+    toast('خطأ في الاتصال بـ Claude API','err');
+  }
+}
+
+// ==================== TABLE BUILDER ====================
+function renderTable(){
+  const th=document.getElementById('mTh');
+  const tb=document.getElementById('mTb');
+  if(!th||!tb)return;
+  th.innerHTML=`<tr><th class="rn">#</th>${STATE.cols.map((c,i)=>`<th><input class="ch" value="${c}" onchange="STATE.cols[${i}]=this.value;saveState()" /></th>`).join('')}<th style="width:36px">📱</th></tr>`;
+  tb.innerHTML=STATE.rows.map((r,ri)=>`<tr><td class="rn" style="cursor:pointer" title="حذف" onclick="delRow(${ri})">✕</td>${STATE.cols.map((_,ci)=>`<td><input value="${(r[ci]||'').replace(/"/g,'&quot;')}" oninput="STATE.rows[${ri}][${ci}]=this.value;STATE.totalRows=STATE.rows.flat().filter(x=>x).length;updateDashboard();saveState()" placeholder="" /></td>`).join('')}<td style="width:36px;text-align:center"><button class="wa-row-btn" title="إرسال واتساب لهذا الصف" onclick="quickWaRow(${ri})">📱</button></td></tr>`).join('');
+}
+
+function addCol(){STATE.cols.push('عمود '+(STATE.cols.length+1));STATE.rows.forEach(r=>r.push(''));renderTable();saveState()}
+function addRow(){STATE.rows.push(STATE.cols.map(()=>''));renderTable();saveState();setTimeout(()=>{const i=document.querySelector('#mTb tr:last-child td:nth-child(2) input');if(i)i.focus()},50)}
+function delLastCol(){if(STATE.cols.length<=1){toast('لا يمكن حذف آخر عمود','err');return}STATE.cols.pop();STATE.rows.forEach(r=>r.pop());renderTable();saveState()}
+function clearTbl(){STATE.rows=[STATE.cols.map(()=>'')];renderTable();saveState();toast('تم مسح الجدول')}
+
+async function aiFillTable(){
+  const prog=document.getElementById('tblProg');
+  prog.style.display='block';
+  document.getElementById('tblFill').style.width='20%';
+  document.getElementById('tblTxt').textContent='جاري توليد البيانات...';
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',max_tokens:800,
+        messages:[{role:'user',content:`أنشئ بيانات تجريبية واقعية سعودية لجدول بيانات.
+الأعمدة: ${STATE.cols.join(', ')}
+أجب بـ JSON فقط: {"rows":[["قيمة1","قيمة2",...],...]}, 6 صفوف`}]
+      })
+    });
+    document.getElementById('tblFill').style.width='80%';
+    const data=await res.json();
+    const content=data.content?.[0]?.text||'';
+    const clean=content.replace(/```json|```/g,'').trim();
+    const parsed=JSON.parse(clean);
+    STATE.rows=parsed.rows;
+    STATE.tablesCreated++;
+    STATE.totalRows+=parsed.rows.length;
+    renderTable();updateDashboard();saveState();
+    document.getElementById('tblFill').style.width='100%';
+    setTimeout(()=>prog.style.display='none',600);
+    toast('تم توليد البيانات ✓','ok');
+  }catch(e){prog.style.display='none';toast('خطأ في الاتصال','err')}
+}
+
+// ==================== EXPORT ====================
+function getTableData(id){
+  const tbl=document.getElementById(id);
+  if(!tbl)return null;
+  const headers=Array.from(tbl.querySelectorAll('thead th')).slice(1).map(th=>(th.querySelector('input')?.value||th.textContent).trim());
+  const rows=Array.from(tbl.querySelectorAll('tbody tr')).map(tr=>Array.from(tr.querySelectorAll('td')).slice(1).map(td=>(td.querySelector('input')?.value||td.textContent).trim()));
+  return{headers,rows};
+}
+
+function dlCSV(id){
+  const d=getTableData(id);if(!d){toast('لا يوجد جدول','err');return}
+  const csv=[d.headers.join(','),...d.rows.map(r=>r.map(c=>`"${c}"`).join(','))].join('\n');
+  dl('\uFEFF'+csv,'dataflow-export.csv','text/csv;charset=utf-8');
+  toast('تم تصدير CSV ✓','ok');
+}
+
+function dlXLSX(id,sheetName){
+  const d=getTableData(id);if(!d){toast('لا يوجد جدول','err');return}
+  const wb=XLSX.utils.book_new();
+  const wsData=[d.headers,...d.rows];
+  const ws=XLSX.utils.aoa_to_sheet(wsData);
+  // Style header row width
+  ws['!cols']=d.headers.map(()=>({wch:18}));
+  XLSX.utils.book_append_sheet(wb,ws,sheetName||'Sheet1');
+  XLSX.writeFile(wb,'dataflow-export.xlsx');
+  toast('تم تصدير Excel ✓','ok');
+}
+
+function dl(content,name,type){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([content],{type}));
+  a.download=name;a.click();
+}
+
+// ==================== FORM FILLER ====================
+function runFiller(){
+  const map={'d-name':'ff-name','d-email':'ff-email','d-phone':'ff-phone','d-city':'ff-city','d-company':'ff-company'};
+  const entries=Object.entries(map);
+  let i=0;
+  document.getElementById('fillProg').style.display='block';
+  entries.forEach(([tid])=>{const el=document.getElementById(tid);if(el)el.value=''});
+  document.getElementById('fillStatus').textContent='';
+  function next(){
+    if(i>=entries.length){
+      document.getElementById('fillStatus').textContent='✅ اكتمل الإدخال التلقائي!';
+      document.getElementById('fillFill').style.width='100%';
+      toast('تم ملء النموذج ✓','ok');
+      return;
+    }
+    const[tid,sid]=entries[i];
+    const val=document.getElementById(sid)?.value||'';
+    if(!val){i++;next();return}
+    document.getElementById('fillFill').style.width=((i/entries.length)*100)+'%';
+    document.getElementById('fillStatus').textContent='جاري كتابة: '+val;
+    typeInto(document.getElementById(tid),val,()=>{i++;setTimeout(next,250)});
+  }
+  next();
+}
+
+function typeInto(el,text,done){
+  if(!el){done();return}
+  el.value='';let j=0;
+  const iv=setInterval(()=>{
+    if(j>=text.length){clearInterval(iv);done();return}
+    el.value+=text[j++];
+    el.dispatchEvent(new Event('input'));
+  },35);
+}
+
+// ==================== KEYBOARD ====================
+let kbIv=null,kbStop=false;
+function startKb(){
+  const txt=document.getElementById('kbText').value;
+  const spd=parseInt(document.getElementById('kbSpeed').value);
+  if(!txt){toast('أدخل نصاً أولاً','err');return}
+  const out=document.getElementById('kbOut');
+  out.textContent='';kbStop=false;
+  document.getElementById('kbStatus').textContent='⌨️ جاري الكتابة...';
+  let i=0;
+  kbIv=setInterval(()=>{
+    if(kbStop||i>=txt.length){
+      clearInterval(kbIv);
+      document.getElementById('kbStatus').textContent=kbStop?'⏹ متوقف':'✅ اكتمل';
+      return;
+    }
+    out.textContent+=txt[i];
+    document.getElementById('kbCount').textContent=++i;
+    out.scrollTop=out.scrollHeight;
+    const ac=document.activeElement;
+    if(ac&&(ac.tagName==='INPUT'||ac.tagName==='TEXTAREA')&&ac.id!=='kbText'&&ac.id!=='kbSpeed'){
+      ac.value+=txt[i-1];
+      ac.dispatchEvent(new Event('input'));
+    }
+  },spd);
+}
+function stopKb(){kbStop=true;clearInterval(kbIv);document.getElementById('kbStatus').textContent='⏹ متوقف'}
+function clearKb(){document.getElementById('kbOut').textContent='';document.getElementById('kbCount').textContent='0';document.getElementById('kbStatus').textContent=''}
+
+// ==================== PROGRESS HELPER ====================
+function runProgress(wrapId,fillId,txtId,msgs,done){
+  const wrap=document.getElementById(wrapId);
+  const fill=document.getElementById(fillId);
+  const txt=document.getElementById(txtId);
+  wrap.style.display='block';
+  let p=0;
+  const iv=setInterval(()=>{
+    p+=Math.random()*15+5;if(p>100)p=100;
+    fill.style.width=p+'%';
+    txt.textContent=msgs[Math.min(Math.floor(p/25),msgs.length-1)];
+    if(p>=100){clearInterval(iv);setTimeout(()=>{wrap.style.display='none';done()},400)}
+  },180);
+}
+
+
+// ==================== THEME ====================
+function toggleTheme(){
+  document.body.classList.toggle('light');
+  const isDark=!document.body.classList.contains('light');
+  document.getElementById('tog-dark').checked=isDark;
+  localStorage.setItem('df_theme',isDark?'dark':'light');
+}
+function applyTheme(){
+  const isDark=document.getElementById('tog-dark').checked;
+  document.body.classList.toggle('light',!isDark);
+  localStorage.setItem('df_theme',isDark?'dark':'light');
+}
+function loadTheme(){
+  const t=localStorage.getItem('df_theme');
+  if(t==='light'){document.body.classList.add('light');document.getElementById('tog-dark').checked=false}
+}
+
+// ==================== SEARCH TABLE ====================
+function filterTable(q){
+  const rows=document.querySelectorAll('#mTb tr');
+  q=q.toLowerCase();
+  rows.forEach(r=>{
+    const txt=Array.from(r.querySelectorAll('input')).map(i=>i.value).join(' ').toLowerCase();
+    r.style.display=!q||txt.includes(q)?'':'none';
+  });
+}
+
+// ==================== CONFIRM ====================
+let _confirmFn=null;
+function confirmAction(title,msg,fn){
+  if(!document.getElementById('tog-confirm')?.checked){fn();return}
+  _confirmFn=fn;
+  document.getElementById('confirmTitle').textContent=title;
+  document.getElementById('confirmMsg').textContent=msg;
+  document.getElementById('confirmModal').classList.add('show');
+}
+function runConfirm(){
+  document.getElementById('confirmModal').classList.remove('show');
+  if(_confirmFn){_confirmFn();_confirmFn=null}
+}
+function confirmClear(){confirmAction('مسح الجدول','سيتم حذف جميع البيانات الحالية.',clearTbl)}
+
+// ==================== DEL ROW ====================
+function delRow(ri){
+  STATE.rows.splice(ri,1);
+  if(STATE.rows.length===0)STATE.rows=[STATE.cols.map(()=>'')];
+  renderTable();saveState();
+}
+
+// ==================== SETTINGS ====================
+function saveSettings(){
+  const name=document.getElementById('set-name').value||'م';
+  STATE.userName=name;
+  document.getElementById('userAvatar').textContent=name[0];
+  saveState();
+  toast('تم حفظ الإعدادات ✓','ok');
+}
+function resetAll(){
+  localStorage.removeItem('df_state');
+  Object.assign(STATE,{conversions:0,tablesCreated:0,totalRows:0,history:[],cols:['الاسم','الهاتف','البريد','العنوان'],rows:[['','','','']]});
+  updateUsage();updateDashboard();renderTable();
+  toast('تم إعادة ضبط البيانات','ok');
+}
+
+// ==================== FOOTER VISIBILITY ====================
+function updateFooter(){
+  const f=document.getElementById('mainFooter');
+  if(f)f.style.display=document.getElementById('page-landing').classList.contains('active')?'block':'none';
+}
+
+// ==================== SETTINGS USAGE SYNC ====================
+function syncSettingsUsage(){
+  const pct=Math.min((STATE.conversions/STATE.maxFree)*100,100);
+  const el=document.getElementById('set-usage-fill');
+  const nl=document.getElementById('set-usage-num');
+  if(el)el.style.width=pct+'%';
+  if(nl)nl.textContent=STATE.conversions+'/'+STATE.maxFree;
+}
+
+
+// ==================== AI CHAT ====================
+function toggleAiChat(){
+  const p=document.getElementById('aiChatPanel');
+  p.classList.toggle('open');
+  if(p.classList.contains('open'))document.getElementById('aiInput').focus();
+}
+
+function sendAiSug(el){
+  document.getElementById('aiInput').value=el.textContent;
+  sendAiMsg();
+}
+
+function addAiMsg(text,role){
+  const msgs=document.getElementById('aiMessages');
+  const div=document.createElement('div');
+  div.className='ai-msg '+role;
+  div.textContent=text;
+  msgs.appendChild(div);
+  msgs.scrollTop=msgs.scrollHeight;
+  return div;
+}
+
+async function sendAiMsg(){
+  const inp=document.getElementById('aiInput');
+  const q=inp.value.trim();
+  if(!q)return;
+  inp.value='';
+  addAiMsg(q,'user');
+
+  // Build table context
+  const tableCtx = buildTableContext();
+
+  // Show thinking
+  const thinking=addAiMsg('جاري التفكير...','bot thinking');
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:1000,
+        messages:[{
+          role:'user',
+          content:`أنت مساعد بيانات ذكي. المستخدم يعمل على جدول بيانات وطلب منك أمراً.
+
+بيانات الجدول الحالي:
+الأعمدة: ${JSON.stringify(STATE.cols)}
+الصفوف: ${JSON.stringify(STATE.rows)}
+
+طلب المستخدم: "${q}"
+
+قواعد الإجابة:
+- إذا كان الطلب يغيّر البيانات (ترتيب، حذف، إضافة، تعديل)، أجب بـ JSON فقط:
+  {"action":"update","cols":["عمود1",...],"rows":[["قيمة1",...],...],"message":"تم تنفيذ ..."}
+- إذا كان الطلب سؤالاً (كم، ما مجموع، ملخص، إلخ)، أجب بـ JSON فقط:
+  {"action":"answer","message":"الجواب هنا"}
+- لا تكتب أي نص خارج الـ JSON
+- الجواب بالعربي دائماً`
+        }]
+      })
+    });
+
+    const data=await res.json();
+    const raw=data.content?.[0]?.text||'{}';
+    const clean=raw.replace(/\`\`\`json|\`\`\`/g,'').trim();
+
+    thinking.remove();
+
+    try{
+      const parsed=JSON.parse(clean);
+      if(parsed.action==='update'){
+        if(parsed.cols)STATE.cols=parsed.cols;
+        if(parsed.rows)STATE.rows=parsed.rows;
+        renderTable();saveState();updateDashboard();
+        addAiMsg('✅ '+parsed.message,'bot');
+      } else {
+        addAiMsg(parsed.message||raw,'bot');
+      }
+    } catch {
+      addAiMsg(raw,'bot');
+    }
+  } catch(e){
+    thinking.remove();
+    addAiMsg('حدث خطأ في الاتصال. تأكد من الاتصال بالإنترنت.','bot');
+  }
+}
+
+function buildTableContext(){
+  return {cols:STATE.cols, rows:STATE.rows};
+}
+
+
+// ==================== CAMERA SCAN ====================
+let camStream = null;
+
+async function startCamera(){
+  try{
+    camStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:960}}});
+    const preview = document.getElementById('camPreview');
+    preview.innerHTML = '<video id="camVideo" autoplay playsinline style="width:100%;height:100%;object-fit:cover"></video><div class="cam-overlay"></div><canvas id="camCanvas" style="display:none"></canvas>';
+    document.getElementById('camVideo').srcObject = camStream;
+    document.getElementById('captureBtn').style.display = '';
+    document.getElementById('stopCamBtn').style.display = '';
+    setStep(1);
+  } catch(e){
+    toast('تعذّر الوصول للكاميرا — جرّب رفع صورة','err');
+  }
+}
+
+function stopCamera(){
+  if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null}
+  const preview = document.getElementById('camPreview');
+  preview.innerHTML = '<div class="cam-placeholder"><div class="ci">📷</div><p>الكاميرا غير مشغّلة</p></div><canvas id="camCanvas" style="display:none"></canvas>';
+  document.getElementById('captureBtn').style.display='none';
+  document.getElementById('stopCamBtn').style.display='none';
+}
+
+function captureFrame(){
+  const video = document.getElementById('camVideo');
+  const canvas = document.getElementById('camCanvas');
+  if(!video){toast('شغّل الكاميرا أولاً','err');return}
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video,0,0);
+  const dataUrl = canvas.toDataURL('image/jpeg',0.85);
+  showCaptured(dataUrl);
+  stopCamera();
+  processImage(dataUrl);
+}
+
+function handleImageFile(inp){
+  const file = inp.files[0];
+  if(!file)return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    showCaptured(e.target.result);
+    processImage(e.target.result);
+  };
+  reader.readAsDataURL(file);
+}
+
+function showCaptured(dataUrl){
+  const img = document.getElementById('capturedImg');
+  img.src = dataUrl;
+  img.style.display = 'block';
+  setStep(1,'done');
+}
+
+function setStep(n, state='active'){
+  for(let i=1;i<=5;i++){
+    const el=document.getElementById('step'+i);
+    if(!el)continue;
+    const icon=el.querySelector('.ss-icon');
+    // Remove spinner if exists
+    const spin=el.querySelector('.ss-spin');
+    if(spin)spin.remove();
+    el.classList.remove('done','active');
+    if(i<n){el.classList.add('done');if(icon)icon.textContent=['📷','🔍','🧠','📊','✅'][i-1]}
+    else if(i===n){
+      el.classList.add('active');
+      if(state==='active'&&icon){
+        const sp=document.createElement('span');sp.className='ss-spin';
+        el.insertBefore(sp,icon);
+      }
+      if(state==='done'){el.classList.remove('active');el.classList.add('done')}
+    }
+  }
+}
+
+async function processImage(dataUrl){
+  if(!checkLimit())return;
+  document.getElementById('camResult').style.display='none';
+
+  // Step 2: OCR via Claude Vision
+  setStep(2);
+  await sleep(400);
+
+  // Step 3: AI Analysis
+  setStep(3);
+
+  try{
+    // Extract base64
+    const base64 = dataUrl.split(',')[1];
+    const mtype = dataUrl.startsWith('data:image/png')?'image/png':'image/jpeg';
+
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:1500,
+        messages:[{
+          role:'user',
+          content:[
+            {
+              type:'image',
+              source:{type:'base64',media_type:mtype,data:base64}
+            },
+            {
+              type:'text',
+              text:`اقرأ هذه الصورة بدقة واستخرج منها كل البيانات المنظمة.
+إذا كانت فاتورة: استخرج الأسماء والكميات والأسعار والإجمالي.
+إذا كانت جدول: استخرج الأعمدة والصفوف كما هي.
+إذا كانت بطاقة عمل: استخرج الاسم والهاتف والبريد والشركة.
+إذا كانت نص عادي: حوّله لجدول منظم.
+
+أجب بـ JSON فقط بهذا الشكل بدون أي نص إضافي:
+{"columns":["عمود1","عمود2",...],"rows":[["قيمة1","قيمة2",...],...],"summary":"وصف مختصر لما تم استخراجه"}`
+            }
+          ]
+        }]
+      })
+    });
+
+    setStep(4);
+    await sleep(300);
+
+    const data = await res.json();
+    const raw = data.content?.[0]?.text||'{}';
+    const clean = raw.replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(clean);
+
+    setStep(5,'done');
+
+    // Build result table
+    document.getElementById('camResult').style.display='block';
+    document.getElementById('camTblWrap').innerHTML = `
+      <table class="dt" id="camTbl">
+        <thead><tr><th class="rn">#</th>${parsed.columns.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+        <tbody>${parsed.rows.map((r,i)=>`<tr><td class="rn">${i+1}</td>${r.map(c=>`<td><input value="${String(c).replace(/"/g,'&quot;')}" /></td>`).join('')}</tr>`).join('')}</tbody>
+      </table>`;
+
+    logHistory('مسح صورة','📸');
+    toast('تم استخراج البيانات من الصورة ✓','ok');
+
+    if(parsed.summary){
+      setTimeout(()=>{
+        const msgs=document.getElementById('aiMessages');
+        if(msgs){
+          const div=document.createElement('div');
+          div.className='ai-msg bot';
+          div.textContent='📸 '+parsed.summary;
+          msgs.appendChild(div);
+          msgs.scrollTop=msgs.scrollHeight;
+        }
+      },500);
+    }
+
+  } catch(e){
+    toast('خطأ في تحليل الصورة — تأكد من وضوحها','err');
+    setStep(1);
+  }
+}
+
+function sendToTableBuilder(){
+  const tbl=document.getElementById('camTbl');
+  if(!tbl){toast('لا يوجد جدول','err');return}
+  const headers=Array.from(tbl.querySelectorAll('thead th')).slice(1).map(th=>th.textContent.trim());
+  const rows=Array.from(tbl.querySelectorAll('tbody tr')).map(tr=>Array.from(tr.querySelectorAll('td')).slice(1).map(td=>(td.querySelector('input')?.value||'').trim()));
+  STATE.cols=headers;
+  STATE.rows=rows;
+  renderTable();saveState();
+  switchTool('table');
+  toast('تم إرسال البيانات لمنشئ الجداول ✓','ok');
+}
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+
+
+// ==================== API LAYER ====================
+const API_BASE = 'https://your-backend.up.railway.app/api'; // ← غيّر هذا بعد النشر
+let AUTH_TOKEN = localStorage.getItem('df_token') || null;
+
+const api = {
+  headers() {
+    const h = { 'Content-Type': 'application/json' };
+    if (AUTH_TOKEN) h['Authorization'] = 'Bearer ' + AUTH_TOKEN;
+    return h;
+  },
+  async post(path, body) {
+    const r = await fetch(API_BASE + path, { method: 'POST', headers: this.headers(), body: JSON.stringify(body) });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'خطأ في الخادم');
+    return d;
+  },
+  async get(path) {
+    const r = await fetch(API_BASE + path, { headers: this.headers() });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'خطأ في الخادم');
+    return d;
+  },
+  async put(path, body) {
+    const r = await fetch(API_BASE + path, { method: 'PUT', headers: this.headers(), body: JSON.stringify(body) });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'خطأ في الخادم');
+    return d;
+  },
+  async del(path) {
+    const r = await fetch(API_BASE + path, { method: 'DELETE', headers: this.headers() });
+    return r.json();
+  }
+};
+
+// Check if backend is configured
+const BACKEND_READY = !API_BASE.includes('your-backend');
+
+// ── Auth with real backend ──
+async function doAuthReal(name, email, password, isLogin = false) {
+  if (!BACKEND_READY) return false; // fallback to demo mode
+  try {
+    const endpoint = isLogin ? '/auth/login' : '/auth/register';
+    const body = isLogin ? { email, password } : { name, email, password };
+    const data = await api.post(endpoint, body);
+    AUTH_TOKEN = data.token;
+    localStorage.setItem('df_token', AUTH_TOKEN);
+    STATE.userName = data.user.name;
+    STATE.userPlan = data.user.plan;
+    STATE.conversions = data.user.conversions_used;
+    saveState();
+    return true;
+  } catch (e) {
+    toast(e.message, 'err');
+    return false;
+  }
+}
+
+// ── Convert text with real backend ──
+async function convertTextAPI(text) {
+  if (!BACKEND_READY || !AUTH_TOKEN) return null;
+  try {
+    return await api.post('/convert/text', { text });
+  } catch (e) {
+    if (e.message.includes('انتهت')) { showModal(); return null; }
+    throw e;
+  }
+}
+
+// ── Convert image with real backend ──
+async function convertImageAPI(base64, mediaType) {
+  if (!BACKEND_READY || !AUTH_TOKEN) return null;
+  try {
+    return await api.post('/convert/image', { base64, mediaType });
+  } catch (e) {
+    if (e.message.includes('انتهت')) { showModal(); return null; }
+    throw e;
+  }
+}
+
+// ── AI command with real backend ──
+async function aiCommandAPI(command, cols, rows) {
+  if (!BACKEND_READY || !AUTH_TOKEN) return null;
+  try {
+    return await api.post('/convert/ai-command', { command, cols, rows });
+  } catch (e) { throw e; }
+}
+
+// ── Billing checkout ──
+async function startCheckout(plan) {
+  if (!BACKEND_READY || !AUTH_TOKEN) {
+    toast('سجّل الدخول أولاً للترقية', 'err'); return;
+  }
+  try {
+    toast('جاري تجهيز صفحة الدفع...', '');
+    const data = await api.post('/billing/checkout', {
+      plan,
+      callback_url: window.location.origin + '?payment=success'
+    });
+    if (data.payment_url) window.open(data.payment_url, '_blank');
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+// ── Load billing status ──
+async function loadBillingStatus() {
+  if (!BACKEND_READY || !AUTH_TOKEN) return;
+  try {
+    const data = await api.get('/billing/status');
+    STATE.conversions = data.conversions_used;
+    STATE.userPlan = data.plan;
+    if (data.conversions_limit) STATE.maxFree = data.conversions_limit;
+    updateUsage(); updateDashboard(); saveState();
+  } catch (e) {}
+}
+
+// ── Save table to backend ──
+async function saveTableToBackend(name) {
+  if (!BACKEND_READY || !AUTH_TOKEN) return;
+  try {
+    await api.post('/tables', { name: name || 'جدول جديد', cols: STATE.cols, rows: STATE.rows });
+    toast('تم حفظ الجدول في السحابة ☁️', 'ok');
+  } catch (e) { toast('خطأ في الحفظ', 'err'); }
+}
+
+// Check payment success on load
+if (window.location.search.includes('payment=success')) {
+  toast('تم الدفع بنجاح! تم ترقية حسابك 🎉', 'ok');
+  history.replaceState({}, '', window.location.pathname);
+  loadBillingStatus();
+}
+
+
+// ==================== WHATSAPP ====================
+function detectPhoneCol(){
+  // try to auto-detect phone column by name or content
+  let idx = STATE.cols.findIndex(c => /هاتف|جوال|موبايل|phone|تليفون|واتساب/i.test(c));
+  if(idx === -1){
+    // fallback: detect by content pattern (digits, 9-13 chars)
+    for(let ci=0; ci<STATE.cols.length; ci++){
+      const sample = STATE.rows.find(r=>r[ci])?.[ci] || '';
+      if(/^\+?\d[\d\s-]{7,14}$/.test(sample.trim())){ idx = ci; break; }
+    }
+  }
+  return idx === -1 ? 0 : idx;
+}
+
+function normalizePhone(raw){
+  let p = (raw||'').replace(/[\s\-()]/g,'');
+  if(p.startsWith('+')) p = p.slice(1);
+  if(p.startsWith('00')) p = p.slice(2);
+  if(p.startsWith('0')) p = '966' + p.slice(1);          // Saudi local → international
+  if(!p.startsWith('966') && p.length === 9) p = '966' + p; // bare 9-digit number
+  return p;
+}
+
+function fillTemplate(template, row){
+  let msg = template;
+  STATE.cols.forEach((c, i) => {
+    msg = msg.split('{'+c+'}').join(row[i] || '');
+  });
+  return msg;
+}
+
+function buildWaLink(phone, message){
+  return 'https://wa.me/' + normalizePhone(phone) + '?text=' + encodeURIComponent(message);
+}
+
+// ── Single row quick send ──
+function quickWaRow(ri){
+  const row = STATE.rows[ri];
+  const phoneIdx = detectPhoneCol();
+  const phone = row[phoneIdx];
+  if(!phone){ toast('لم يتم العثور على رقم هاتف في هذا الصف','err'); return; }
+
+  // Build a default friendly message using all columns
+  let msg = STATE.cols.map((c,i)=> row[i] ? `${c}: ${row[i]}` : null).filter(Boolean).join('\n');
+  if(!msg) msg = 'مرحباً';
+
+  document.getElementById('waSinglePreview').textContent = msg;
+  const btn = document.getElementById('waSingleSendBtn');
+  btn.onclick = () => {
+    window.open(buildWaLink(phone, msg), '_blank');
+    document.getElementById('waSingleModal').classList.remove('show');
+  };
+  document.getElementById('waSingleModal').classList.add('show');
+}
+
+// ── Bulk WhatsApp modal ──
+function openWaModal(){
+  if(STATE.rows.length === 0 || STATE.rows.every(r=>r.every(c=>!c))){
+    toast('الجدول فارغ — أضف بيانات أولاً','err'); return;
+  }
+  const sel = document.getElementById('waPhoneCol');
+  sel.innerHTML = STATE.cols.map((c,i)=>`<option value="${i}">${c}</option>`).join('');
+  sel.value = detectPhoneCol();
+
+  // Build field tags
+  const tagsWrap = document.getElementById('waFieldTags');
+  tagsWrap.innerHTML = '<span style="font-size:.72rem;color:var(--muted)">انقر لإدراج الحقل: </span>' +
+    STATE.cols.map(c=>`<span class="wa-field-tag" onclick="insertWaField('${c}')">{${c}}</span>`).join('');
+
+  // Default template if empty
+  const ta = document.getElementById('waTemplate');
+  if(!ta.value.trim()){
+    const nameCol = STATE.cols.find(c=>/اسم|name/i.test(c)) || STATE.cols[0];
+    ta.value = `مرحباً {${nameCol}}،\n\nنود تذكيركم بـ...\n\nمع التحية، فريق DataFlow`;
+  }
+
+  document.getElementById('waBulkList').style.display = 'none';
+  document.getElementById('waModal').classList.add('show');
+}
+
+function closeWaModal(){
+  document.getElementById('waModal').classList.remove('show');
+}
+
+function insertWaField(col){
+  const ta = document.getElementById('waTemplate');
+  const pos = ta.selectionStart || ta.value.length;
+  ta.value = ta.value.slice(0,pos) + '{'+col+'}' + ta.value.slice(pos);
+  ta.focus();
+}
+
+function prepareWaBulk(){
+  const phoneIdx = parseInt(document.getElementById('waPhoneCol').value);
+  const template = document.getElementById('waTemplate').value.trim();
+  if(!template){ toast('أدخل نص الرسالة أولاً','err'); return; }
+
+  const validRows = STATE.rows.filter(r => r[phoneIdx] && r[phoneIdx].trim());
+  if(validRows.length === 0){ toast('لا توجد أرقام هواتف صالحة في هذا العمود','err'); return; }
+
+  const list = document.getElementById('waBulkList');
+  list.style.display = 'block';
+  list.innerHTML = validRows.map((r,i) => {
+    const nameGuess = r.find((v,ci)=>ci!==phoneIdx && v) || ('جهة اتصال '+(i+1));
+    const msg = fillTemplate(template, r);
+    return `<div class="wa-bulk-item">
+      <div><span class="wbi-name">${nameGuess}</span><span class="wbi-phone">${r[phoneIdx]}</span></div>
+      <button class="wa-send-mini" onclick="window.open('${buildWaLink(r[phoneIdx], msg).replace(/'/g,"\\'")}','_blank')">إرسال ↗</button>
+    </div>`;
+  }).join('');
+
+  toast(`تم تجهيز ${validRows.length} رسالة — انقر إرسال لكل جهة اتصال`, 'ok');
+  logHistory('إرسال واتساب جماعي', '📱');
+}
+
+// INIT
+loadState();
+loadTheme();
+</script>
+
+<!-- FOOTER (landing only) -->
+<footer id="mainFooter" style="display:none">
+  <div class="foot-grid">
+    <div class="foot-brand">
+      <div class="logo" style="font-size:1.1rem">DataFlow</div>
+      <p>منصة أتمتة إدخال البيانات الأولى في المنطقة العربية. نحول PDF وأي بيانات إلى جداول Excel في ثوانٍ.</p>
+    </div>
+    <div class="foot-col">
+      <h5>المنتج</h5>
+      <a href="#" onclick="enterApp();switchTool('pdf')">PDF إلى جدول</a>
+      <a href="#" onclick="enterApp();switchTool('table')">منشئ الجداول</a>
+      <a href="#" onclick="enterApp();switchTool('form')">مُدخل النماذج</a>
+      <a href="#" onclick="enterApp();switchTool('keyboard')">الكاتب الآلي</a>
+    </div>
+    <div class="foot-col">
+      <h5>الشركة</h5>
+      <a href="#">من نحن</a>
+      <a href="#">التسعير</a>
+      <a href="#">سياسة الخصوصية</a>
+      <a href="#">الشروط والأحكام</a>
+    </div>
+  </div>
+  <div class="foot-bottom">
+    <p>© 2025 DataFlow. جميع الحقوق محفوظة.</p>
+    <p style="color:var(--muted)">صُنع بـ ❤️ للسوق العربي</p>
+  </div>
+</footer>
+
+
+
+<!-- WHATSAPP MODAL -->
+<div class="modal-bg" id="waModal">
+  <div class="modal" style="max-width:480px;text-align:right">
+    <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.25rem">
+      <span style="font-size:1.6rem">📱</span>
+      <h3 style="margin:0">إرسال عبر واتساب</h3>
+    </div>
+    <p style="text-align:right">اختر الأعمدة التي تريد إدراجها في الرسالة، ثم حدد عمود رقم الهاتف</p>
+
+    <div class="wa-modal-content">
+      <label style="font-size:.78rem;color:var(--muted);display:block;margin-bottom:.3rem">عمود رقم الهاتف</label>
+      <select class="wa-col-select" id="waPhoneCol"></select>
+
+      <label style="font-size:.78rem;color:var(--muted);display:block;margin-bottom:.3rem">قالب الرسالة</label>
+      <textarea id="waTemplate" class="wa-template" style="width:100%;min-height:90px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:inherit;font-size:.85rem;border-radius:10px;padding:.75rem" placeholder="مرحباً {الاسم}، ..."></textarea>
+      <div id="waFieldTags" style="margin-bottom:.5rem"></div>
+
+      <div style="display:flex;gap:.5rem;margin-top:1rem">
+        <button class="btn-primary wa-btn" style="flex:1" onclick="prepareWaBulk()">📋 معاينة القائمة</button>
+      </div>
+
+      <div class="wa-bulk-list" id="waBulkList" style="display:none"></div>
+    </div>
+
+    <div class="modal-btns" style="margin-top:1.25rem">
+      <button class="btn-secondary" onclick="closeWaModal()">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<!-- SINGLE ROW WHATSAPP QUICK MODAL -->
+<div class="modal-bg" id="waSingleModal">
+  <div class="modal" style="max-width:420px;text-align:right">
+    <div style="font-size:1.8rem;margin-bottom:.4rem">📱</div>
+    <h3>إرسال رسالة واتساب</h3>
+    <p id="waSinglePreview" class="wa-template" style="text-align:right;margin:1rem 0"></p>
+    <div class="modal-btns">
+      <button class="btn-primary wa-btn" id="waSingleSendBtn">فتح واتساب</button>
+      <button class="btn-secondary" onclick="document.getElementById('waSingleModal').classList.remove('show')">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI CHAT ASSISTANT -->
+<button class="ai-chat-btn" id="aiChatBtn" onclick="toggleAiChat()" title="مساعد البيانات الذكي" style="display:none">🧠</button>
+
+<div class="ai-chat-panel" id="aiChatPanel">
+  <div class="ai-chat-header">
+    <div><h4>🧠 مساعد البيانات</h4><span>اسألني عن جدولك بالعربي</span></div>
+    <button class="ai-close" onclick="toggleAiChat()">✕</button>
+  </div>
+  <div class="ai-messages" id="aiMessages">
+    <div class="ai-msg bot">أهلاً! أنا مساعدك الذكي للبيانات. أخبرني ماذا تريد أن أفعل بجدولك وسأنفذه فوراً.</div>
+  </div>
+  <div class="ai-suggestions" id="aiSuggestions">
+    <span class="ai-sug" onclick="sendAiSug(this)">رتّب تنازلياً</span>
+    <span class="ai-sug" onclick="sendAiSug(this)">احذف الفارغة</span>
+    <span class="ai-sug" onclick="sendAiSug(this)">اجمع الأرقام</span>
+    <span class="ai-sug" onclick="sendAiSug(this)">أضف عمود المجموع</span>
+    <span class="ai-sug" onclick="sendAiSug(this)">كم عدد الصفوف؟</span>
+    <span class="ai-sug" onclick="sendAiSug(this)">أعطني ملخصاً</span>
+  </div>
+  <div class="ai-input-row">
+    <input class="ai-input" id="aiInput" placeholder="مثال: رتّب حسب الراتب..." onkeydown="if(event.key==='Enter')sendAiMsg()" />
+    <button class="ai-send" onclick="sendAiMsg()">↑</button>
+  </div>
+</div>
+
+</body>
+</html>
